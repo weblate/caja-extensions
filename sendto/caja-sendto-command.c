@@ -185,8 +185,9 @@ pack_files (NS_ui *ui)
 	char *engrampa_cmd;
 	const char *filename;
 	GList *l;
-	GString *cmd, *tmp;
-	char *pack_type, *tmp_dir, *tmp_work_dir, *packed_file;
+	GString *cmd;
+	char *pack_type, *tmp_dir, *tmp_work_dir;
+	char *packed_file, *packed_file_esc, *packed_file_uri;
 
 	engrampa_cmd = g_find_program_in_path ("engrampa");
 	filename = gtk_entry_get_text(GTK_ENTRY(ui->pack_entry));
@@ -213,33 +214,36 @@ pack_files (NS_ui *ui)
 			    CAJA_SENDTO_LAST_COMPRESS,
 			    gtk_combo_box_get_active(GTK_COMBO_BOX(ui->pack_combobox)));
 
+	packed_file = g_strconcat (tmp_work_dir, "/", filename, pack_type, NULL);
+	g_free (pack_type);
+	g_free (tmp_work_dir);
+
 	cmd = g_string_new ("");
-	g_string_printf (cmd, "%s --add-to=\"%s/%s%s\"",
-			 engrampa_cmd, tmp_work_dir,
-			 filename,
-			 pack_type);
+	packed_file_esc = g_shell_quote (packed_file);
+	g_string_printf (cmd, "%s --add-to=%s", engrampa_cmd, packed_file_esc);
+	g_free (packed_file_esc);
 	g_free (engrampa_cmd);
 
 	/* engrampa doesn't understand URIs */
 	for (l = file_list ; l; l=l->next){
 		char *file;
+		char *file_esc;
 
 		file = g_filename_from_uri (l->data, NULL, NULL);
-		g_string_append_printf (cmd," \"%s\"", file);
+		file_esc = g_shell_quote (file);
+		g_string_append_printf (cmd," %s", file_esc);
+
+		g_free (file_esc);
 		g_free (file);
 	}
 
 	g_spawn_command_line_sync (cmd->str, NULL, NULL, NULL, NULL);
 	g_string_free (cmd, TRUE);
-	tmp = g_string_new("");
-	g_string_printf (tmp,"%s/%s%s", tmp_work_dir,
-			 filename,
-			 pack_type);
-	g_free (pack_type);
-	g_free (tmp_work_dir);
-	packed_file = g_filename_to_uri (tmp->str, NULL, NULL);
-	g_string_free(tmp, TRUE);
-	return packed_file;
+
+	packed_file_uri = g_filename_to_uri (packed_file, NULL, NULL);
+	g_free (packed_file);
+
+	return packed_file_uri;
 }
 
 static gboolean
