@@ -188,6 +188,7 @@ pack_files (NS_ui *ui)
 	GString *cmd;
 	char *pack_type, *tmp_dir, *tmp_work_dir;
 	char *packed_file, *packed_file_esc, *packed_file_uri;
+	GFile *fp;
 
 	engrampa_cmd = g_find_program_in_path ("engrampa");
 	filename = gtk_entry_get_text(GTK_ENTRY(ui->pack_entry));
@@ -242,6 +243,15 @@ pack_files (NS_ui *ui)
 
 	packed_file_uri = g_filename_to_uri (packed_file, NULL, NULL);
 	g_free (packed_file);
+
+	if (packed_file_uri != NULL) {
+		fp = g_file_new_for_uri (packed_file_uri);
+		if (!g_file_query_exists (fp, NULL)) {
+			g_free (packed_file_uri);
+			packed_file_uri = NULL;
+		}
+		g_object_unref (fp);
+	}
 
 	return packed_file_uri;
 }
