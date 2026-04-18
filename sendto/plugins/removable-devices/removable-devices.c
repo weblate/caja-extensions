@@ -216,6 +216,24 @@ get_contacts_widget (NstPlugin *plugin)
 	return cb;
 }
 
+static void
+show_error (const gchar *title, const gchar *message)
+{
+	GtkWidget *dialog;
+
+	dialog = gtk_message_dialog_new_with_markup(NULL,
+								GTK_DIALOG_DESTROY_WITH_PARENT,
+								GTK_MESSAGE_ERROR,
+								GTK_BUTTONS_CLOSE, NULL);
+
+	gchar *msg = g_markup_printf_escaped("<b>%s</b>\n\n%s", title, message);
+	gtk_message_dialog_set_markup (GTK_MESSAGE_DIALOG (dialog), msg);
+	g_free (msg);
+
+	gtk_dialog_run (GTK_DIALOG (dialog));
+	gtk_widget_destroy (dialog);
+}
+
 static gboolean
 send_files (NstPlugin *plugin, GtkWidget *contact_widget,
 	    GList *file_list)
@@ -224,6 +242,7 @@ send_files (NstPlugin *plugin, GtkWidget *contact_widget,
 	GtkTreeIter iter;
 	GMount *dest_mount;
 	GFile *mount_root;
+	gboolean ret;
 
 	if (gtk_combo_box_get_active_iter (GTK_COMBO_BOX (contact_widget), &iter) == FALSE)
 		return TRUE;
@@ -232,11 +251,14 @@ send_files (NstPlugin *plugin, GtkWidget *contact_widget,
 	gtk_tree_model_get (GTK_TREE_MODEL (store), &iter, MOUNT_COL, &dest_mount, -1);
 	mount_root = g_mount_get_root (dest_mount);
 
-	copy_files_to (file_list, mount_root);
+	ret = copy_files_to (file_list, mount_root);
+	if (ret == FALSE)
+		show_error(_("Failed"),
+			_("One or more files failed to copy."));
 
 	g_object_unref (mount_root);
 
-	return TRUE;
+	return ret;
 }
 
 static gboolean
